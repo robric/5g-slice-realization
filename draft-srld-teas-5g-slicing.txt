@@ -5,12 +5,12 @@
 TEAS                                               K. G. Szarkowicz, Ed.
 Internet-Draft                                           R. Roberts, Ed.
 Intended status: Informational                                  J. Lucek
-Expires: 28 September 2023                              Juniper Networks
+Expires: 2 October 2023                                 Juniper Networks
                                                        M. Boucadair, Ed.
                                                                   Orange
                                                          L. M. Contreras
                                                               Telefonica
-                                                           27 March 2023
+                                                           31 March 2023
 
 
  A Realization of IETF Network Slices for 5G Networks Using Current IP/
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 September 2023.
+   This Internet-Draft will expire on 2 October 2023.
 
 Copyright Notice
 
@@ -77,12 +77,13 @@ Table of Contents
 
    1.  Introduction
    2.  5G Network Slicing Integration in Transport Networks
-     2.1.  5G Network Slicing versus Transport Network Slicing
-     2.2.  NF-to-NF Datapath vs. Transport Network
-       2.2.1.  Definition and Scope of the Transport Network
-       2.2.2.  Orchestration of Local Segment Terminations at ETNs
-     2.3.  5G Slice to IETF Network Slice Mapping
-     2.4.  First 5G Slice versus Subsequent Slices
+     2.1.  Forewords: scope of the Transport Network
+     2.2.  5G Network Slicing versus Transport Network Slicing
+     2.3.  Segmentation of the Transport Network
+       2.3.1.  Transport Network ???
+       2.3.2.  Orchestration of Local Segment Terminations at ETNs
+     2.4.  5G Slice to IETF Network Slice Mapping
+     2.5.  First 5G Slice versus Subsequent Slices
    3.  High-Level Overview of the Realization Model
      3.1.  VLAN Hand-off
      3.2.  IP Hand-off
@@ -160,51 +161,48 @@ Table of Contents
    The document uses the terms defined in
    [I-D.ietf-teas-ietf-network-slices] and additional terms:
 
-   Transport Network (TN):  This document defines the Transport Network
-      with a provider scope.  The provider relies on the Transport
-      Network to interconnect customer networks (e.g. customer sites or
-      public/private cloud managed by the customer), usually thanks to
-      VPN services.  The TN extends up the PE (Provider Edge) routers,
-      which connects to adjacent Customer Networks.  We also assume that
-      the Transport Network is based on IP, MPLS or SRv6 technologies.
+   Transport Network (TN):  The term Transport Network is commonly used
+      in mobile networking to represent the connectivity between mobile
+      Network Functions.
 
-   Customer:  A Customer is an entity that relies on the Transport
-      Network for interconnecting networks.  In the context of this
-      document, the customer manages and orchestates the 5G Mobile
-      Network.  The Customer network hosts notably 5G Network Functions
-      for RAN and CORE Networks.
+   Customer:  A Customer is an entity that relies on the Provider
+      Network (e.g.  WAN) for interconnecting customer sites.  In the
+      context of this document, the customer manages and orchestates the
+      5G Mobile Network.  The Customer network hosts notably 5G Network
+      Functions for RAN and CORE Networks.
 
    Provider:  A provider is responsible for Orchestrating and managing
-      the Transport Network to interconnect customer networks.  As per
+      the Provider Network to interconnect customer sites.  As per
       [I-D.ietf-teas-ietf-network-slices]: * The interconnection service
       relies on IETF Network Slices (INS). * The IETF Network Slice
       Controller (NSC) orchestrates the IETF Network Slices.
 
    Customer Edge (CE):  The CE is a device managed by the customer that
-      provides logical connectivity to the Transport Network.  The
+      provides logical connectivity to the Provider Network.  The
       logical connectivity is enforced at Layer 2 and/or Layer 3 and is
       denominated an Attachment Circuit.  In the context of this
       document, examples of CEs include Routers, Switches Firewall,
       Servers or any Network Functions (CU, DU, UPF…).  This document
       generalizes the definition of a CE with the introduction of
-      Distributed CEs introduced in Section 2.2.1.1.
+      Distributed CEs introduced in Section 2.3.1.1.
 
-   Provider Edge (PE):  The PE is a device managed by the Transport
-      Network Orchestration that is connected to the CE.  The
-      connectivity between the CE and the PE is achieved thanks to an
-      Attachment Circuit.  The PE function usually binds ACs to VPN
-      services.  This document generalizes the definition of a CPE with
-      the introduction of Distributed PEs introduced in Section 2.2.1.1.
+   Provider Edge (PE):  The PE is a device managed by the Provider that
+      is connected to the CE.  The connectivity between the CE and the
+      PE is achieved thanks to an Attachment Circuit.  The PE function
+      usually binds ACs to VPN services.  This document generalizes the
+      definition of a PE with the introduction of Distributed PEs
+      introduced in Section 2.3.1.1.
 
    Attachment Circuit (AC):  The attachment circuit is the logical
-      connection that attaches a CE to a PE in the Transport Network.  A
+      connection that attaches a CE to a PE in the Provider Network.  A
       CE is connected to the PE thanks to one or multiple ACs.  ACs are
-      usually bound to a VPN service within the TN.  An AC is
-      technology-specific.  For consistency with data model terminology
-      (insert ref ???), we assume that an AC is configured on a
-      “bearer”, which represents the underlying connectivity.  Examples
-      of ACs are VLANs (AC) configured on a physical interface (bearer)
-      or an Overlay VXLAN EVI (AC) configured on IP underlay (bearer).
+      usually bound to a VPN service within the Provider Network.  An AC
+      is technology-specific.  For consistency with data model
+      terminology (insert ref ???), we assume that an AC is configured
+      on a “bearer”, which represents the underlying connectivity.
+      Examples of ACs are VLANs (AC) configured on a physical interface
+      (bearer) or an Overlay VXLAN EVI (AC) configured on IP underlay
+      (bearer).
 
    5G Network Slice Orchestrator (5GNSO):  The entity responsible for
       the orchestration of the End-to-End 5G Slice made up of RAN, Core
@@ -217,35 +215,97 @@ Table of Contents
 
 2.  5G Network Slicing Integration in Transport Networks
 
-2.1.  5G Network Slicing versus Transport Network Slicing
+2.1.  Forewords: scope of the Transport Network
 
-2.2.  NF-to-NF Datapath vs. Transport Network
+   Appendix Appendix B provides an overview of 5G Networking.  It is
+   advised that the reader with limited background in 5G networking
+   consult . It notably introduces the main building blocks of a 5G
+   Network such as the RAN, CORE and Transport Network.  The 3GPP
+   specifications loosely define the Transport Network and its
+   integration in RAN and CN domains.  Tt is a non 3GPP-management
+   system that interconnects Mobile Network Functions (NFs).
+   Practically, this interconnection (e.g. the TN) may not map with a
+   monolithic architecture and management domain.  It is frequently
+   segmented, non-uniform and managed by different entities.  For
+   Example, Figure 1 depicts a NF deployed in an Edge Data Centers
+   connected to a NF in a Public Cloud thanks to a WAN network (e.g.
+   MPLS-VPN service).  Here, the TN can be interpreted as an abstraction
+   representing an end-to-end connectivity based on 3 distinct IP
+   networking domains: DC, WAN and Public Cloud.  A model for the
+   Transport Network based on Orchestration domains is introduced later
+   in this document.  This model permits to define more precisely where
+   IETF Network Slice applies.  Additionally, the term Transport Network
+   is used to disambiguate 5G Networking (i.e.  RAN and CORE NF
+   Orchestration) with the NF interconnection (e.g.  IP, packet-based
+   forwarding).  By extension, the disambiguation applies to Transport
+   Network Slicing wrt End-to-End 5G Network Slicing (see section ???)
+   as well the Management domains: RAN, Core and TN domains.
 
-   The 3GPP specifications loosely define the Transport Network and its
-   integration in RAN and CN domains: the role of the Transport Network
-   is to interconnect Network Functions (NFs).  In other words, it is
-   the end-to-end datapath between two NFs.  The section clarifies the
-   scope of the Transport Network and its integration in the NF-to-NF
-   datapath.
+                    ┌──────────────────────────────────┐
+                 ┌──│      5G RAN or CORE Network      │──┐
+                 │  └──────────────────────────────────┘  │
+                 │                                        │
+                 ▼                                        ▼
+               ┌──┐  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┌──┐
+               │NF├ ─ ─      Transport Network        ├ ┤NF│
+               └──┘  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  └──┘
+                         │             │            │
+                         ▼             ▼            ▼
 
-2.2.1.  Definition and Scope of the Transport Network
+                 ┌───Data Center──┐ ┌─MPLS-VPN─┐  ┌─Public─┐
+                 │                │ │ Backbone │  │ Cloud  │
+                 │   ┌───┐┌───┐   │┌┴─┐      ┌─┴┐┌┴─┐      │
+                 │   └───┘└───┘   │└┬─┘      └─┬┘└┬─┘      │
+                 │┌──┐┌──┐┌──┐┌──┐│┌┴─┐      ┌─┴┐ │        │
+                 │└──┘└──┘└──┘└──┘│└┬─┘      └─┬┘ │        │
+                 └────────────────┘ └──────────┘  └────────┘
 
-   This document defines the Transport Network with a service provider
-   scope.  The role of the TN is to interconnect Cutomer Networks (e.g.
-   5G sites with 5G Network Functions).  This document makes of the
-   terms defined in [I-D.ietf-teas-ietf-network-slices]: * The TN
-   extends up to the Provider Edge (PE). * The PE is logically connected
-   to the Customer Network via an Attachment Circuit. * The CE is a
-   device managed by the customer (i.e. 5G Network Orchestration) that
-   provides logical connectivity to the Transport Network via the
-   Attachment Circuit.  We also assume that the Transport Network is
-   based on IP, MPLS or SRv6 technologies.  Additionally, the
-   orchestration of the TN is based on the IETF NSC.
+            Figure 1: Transport Network vs RAN and CORE Network
 
-   In parrallel, a 5G Network Slice Orchestrator is responsible for
-   orchestating the end-to-end 5G Slice logic: Customer Network
-   including Network Functions and the Transport Network.  The
-   Orchestration of the TN is enforced via the IETF NSC.
+2.2.  5G Network Slicing versus Transport Network Slicing
+
+2.3.  Segmentation of the Transport Network
+
+   [insert ??? FIX] (e.g. customer sites or public/private cloud managed
+   by the customer), usually thanks to VPN services.  The TN extends up
+   the PE (Provider Edge) routers, which connects to adjacent Customer
+   Networks.  We also assume that the Transport Network is based on IP,
+   MPLS or SRv6 technologies.
+
+2.3.1.  Transport Network ???
+
+   To start with, we assume that a 5G Network Slice Orchestrator is
+   responsible for the orchestration of end-to-end 5G Slice.  This
+   includes the configuration of slices for the RAN and CORE domains
+   (i.e. 5G Network Functions) and the Transport domain (i.e.  NF-NF
+   datapath). (??? add ref to framework for customer/provider naming)
+   This document splits the orchestration Transport domain into two main
+   building blocks: - Customer Site: the customer site contains the 5G
+   Network Functions and optionally additional routing devices. -
+   Provider Network: the Provider Network interconnects customer sites
+   (i.e.  WAN).
+
+   The RAN and CORE Networks NFs are deployed This includes the
+   orchestration Customer and Transport Network This document defines
+   the Transport Network with a service provider scope (i.e.  WAN ).
+   The role of the TN is to interconnect Cutomer Networks (e.g. 5G sites
+   with 5G Network Functions).
+
+   This document makes of the terms defined in
+   [I-D.ietf-teas-ietf-network-slices]: * The TN extends up to the
+   Provider Edge (PE). * The PE is logically connected to the Customer
+   Network via an Attachment Circuit. * The CE is a device managed by
+   the customer (i.e. 5G Network Orchestration) that provides logical
+   connectivity to the Transport Network via the Attachment Circuit.
+   The CE can be a 5G Network Function (i.e. an element of 5G domain),
+   or a TN Function (router, switch).  We also assume that the Transport
+   Network is based on IP, MPLS or SRv6 technologies.  Additionally, the
+   orchestration of the TN is based on the IETF NSC.  In parrallel, a 5G
+   Network Slice Orchestrator is responsible for orchestating the end-
+   to-end 5G Slice logic.  This includes the orchestration of the
+   Customer Network and the Transport Network. including Network
+   Functions and the Transport Network.  The Orchestration of the TN is
+   enforced via the IETF NSC.
 
                                 ┌───────────┐
          ┌──────────────────────┤   5GNSO   ├──────────────────────┐
@@ -270,7 +330,7 @@ Table of Contents
 │      └──┘                   │               │             │
  ─ ─ ─ ─ ─ ─ ─ ┘               ─ ─ ─ ─ ─ ─ ─ ─               ─ ─ ─ ─ ─ ─ ─ ┘
 
-              Figure 1: TN integration in 5G E2E Slicing
+              Figure 2: TN integration in 5G E2E Slicing
 
    Deployments may not strictly fit with the generic PE/CE definition
    above.  For example, the provider can mandate the use of a Managed CE
@@ -282,7 +342,9 @@ Table of Contents
    actual location of the Attachment Circuit.  The following sections
    clarifies these aspects.
 
-2.2.1.1.  Distributed PE and CE
+   ??? Define the Customer Network Orchestration logic.
+
+2.3.1.1.  Distributed PE and CE
 
    This document introduces the concept of distributed CEs and PEs.
    This approach provides a generic definition of CE/PE/AC that is
@@ -290,65 +352,82 @@ Table of Contents
    delimit respectively the Customer and Provider Orchestration domains,
    while the AC interconnects these domains.
 
-   Figure 2 represents the generic model for CE and PE together with
-   distributed CE and PE use-cases. * Distributed CE: the logical
-   connectivity is realized thanks to the configuration of multiple
-   devices in the Customer Domain.  The CE function is distributed.  An
-   example of such a distribution is the realization of an
-   interconnection with an L3 VPN service based on a distributed CE
-   composed of an L2 switch and an L3 router (example ii). * Distributed
-   PE: the logical connectivity is realized thanks to the configuration
-   of multiple devices in the Transport Network (provider domain).  The
-   PE function is distributed.  An example of a distributed PE is the
-   “Managed CE service” as it is commonly named in the industry.  In
-   this case, a provider supplies VPN services based on CE and PE which
-   are both managed by the provider.  The “Managed CE” use case is a
-   frequent source of confusion, since the actual Edge (Customer vs
-   Provider) does not map with the Orchestration perimeters.  For this
-   purpose, these two elements are considered as distributed PE.
+   [REF ?? figure below - bug] represents the generic model for CE and
+   PE together with examples of distributed CE and PE use-cases. *
+   Distributed CE: the logical connectivity is realized thanks to the
+   configuration of multiple devices in the Customer Domain.  The CE
+   function is distributed.  An example of such a distribution is the
+   realization of an interconnection with an L3 VPN service based on a
+   distributed CE composed of an L2 switch and an L3 router (example
+   ii). * Distributed PE: the logical connectivity is realized thanks to
+   the configuration of multiple devices in the Transport Network
+   (provider Orchestration domain).  The PE function is distributed.  An
+   example of a distributed PE is the “Managed CE service” as it is
+   commonly named in the industry.  In this case, a provider supplies
+   VPN services based on CE and PE which are both managed by the
+   provider (example iii).  The “Managed CE” use case is a frequent
+   source of confusion, since the actual Edge (Customer vs Provider)
+   does not map with the Orchestration perimeters.  For this purpose,
+   these two elements are considered as distributed PE.  The managed CE
+   can also be a Data Center Gateway as depicted in example iv).
 
-   For the rest of the document, CE and PE are used as unified
-   terminology for a single device and a distributed device. ~~~~
-   ┌──────────────┐ ┌───────────────┐ │ Customer │ │ Transport │ │
-   Domain┌───┴┐ ┌──┴─┐ Network │ │ │ ├──────────────────┤ │ │ │ │ CE ├ ─
-   ─ ─ ─AC ─ ─ ─ ─│ PE │ │ │ │ ├──────────────────┤ │ │ │ └───┬┘ └──┬─┘
-   │ │ │ │ │ └──────────────┘ └───────────────┘ i) Generic Model
+   In subsequent sections of this document, the terms CE and PE are used
+   for both a single device and a distributed device. ~~~~ ┌ ─ ─ ─ ─ ─ ─
+   ─ ┌ ─ ─ ─ ─ ─ ─ ─ ┐ Customer │ Provider
+   │ Site ┌────┐ ┌──┴─┐ Network │ │ ├──────────────────┤ │
+   │ │ CE ├ ─ ─ ─ ─AC ─ ─ ─ ─│ PE │ │ │ ├──────────────────┤ │
+   │ └────┘ └──┬─┘ │ ─ ─ ─ ─ ─ ─ ─ ┘ ─ ─ ─ ─ ─ ─ ─ ─ i) Generic Model
+   ┌ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ─ ┐ Customer │ Provider
+   │ Site │ Network │ ┏━━━━━━━━━━━━━━━┓
+   │┃ ┌─────┐ ┌────┐┃ ┌──┴─┐ │ ┃ │ │ │ ├┃─────────────────┤ │
+   │┃ │ ├ ┼ ─ ─│┃ ─ ─ ─ AC─ ─ ─ ─ ┤ PE │ │ ┃ │ RTR │ │ SW
+   ├┃─────────────────┤ │
+   │┃ └─────┘ └────┘┃ └──┬─┘ │ ┗━━Distributed━━┛
+   │ CE │ │ ─ ─ ─ ─ ─ ─ ─ ┘ ─ ─ ─ ─ ─ ─ ─ ─ ii) Distributed CE
+   ┌ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ─ ┐ Customer │ Provider
+   │ Site │ Network │ │ ┏━━━━━━━━━━━━━━━┓
+   │ ┌────┐ ┃┌──┴─┐ ┌────┐┃ │ │ ├─────────────────┃┤Mngd│ │ │┃
+   │ │ CE ├ ─ ─ ─ ─AC ─ ─ ─ ┃│ CE ├───┤ PE │┃ │ │ ├─────────────────┃┤ │
+   │ │┃
+   │ └────┘ ┃└──┬─┘ └────┘┃ │ │ ┗━━Distributed━━┛
+   │ │ PE │ ─ ─ ─ ─ ─ ─ ─ ┘ ─ ─ ─ ─ ─ ─ ─ ─ iii) Distributed PE
 
-   ┌──────────────┐ ┌───────────────┐ │ Customer │ │ Transport │ │
-   Domain │ │ Network │ │┏━━━━━━━━━━━━━━━┓ │ │ │┃ ┌─────┐ ┌───┴┐┃ ┌──┴─┐
-   │ │┃ │ │ │ ├┃─────────────────┤ │ │ │┃ │ ├ ┼ ─ ─│┃ ─ ─ ─ AC─ ─ ─ ─ ┤
-   PE │ │ │┃ │ RTR │ │ SW ├┃─────────────────┤ │ │ │┃ └─────┘ └───┬┘┃
-   └──┬─┘ │ │┗━━Distributed━━┛ │ │ │ CE │ │ │ │ │ │ │ └──────────────┘
-   └───────────────┘ ii) Distributed CE
+   ┌ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ─ ┐ Customer │ Provider
+   │ Site │ Network │ ┏━━━━━━━━━━━━━━━━┓ ┏━━━━━━━━━━━━━━━━┓
+   │ ┃ IP Fabric ┃ ┃┌──┴─┐ ┌────┐ ┃ │ ┃ ┌───┐┌───┐ ┃─────────────╋┤ DC │
+   │ │ ┃
+   │ ┃ └───┘└───┘ ┃ ─ ─ ─AC ─ ─ ╋│ GW ├───┤ PE │ ┃ │
+   ┃┌──┐┌──┐┌──┐┌──┐┃─────────────╋┤ │ │ │ ┃
+   │ ┃└──┘└──┘└──┘└──┘┃ ┃└──┬─┘ └────┘ ┃ │ ┗━━━Distributed━━┛
+   ┗━━Distributed━━━┛
+   │ CE │ PE │ │
+   └ ─Data Center─ └ ─ ─ ─ ─ ─ ─ ─ ┘ iv) Distributed PE
+   and CE
 
-   ┌──────────────┐ ┌───────────────┐ │ Customer │ │ Transport │ │
-   Domain │ │ Network │ │ │ ┏━━━━━━━━━━━━━━━┓ │ │ ┌───┴┐ ┃┌──┴─┐ ┌────┐┃
-   │ │ │ ├─────────────────┃┤Mngd│ │ │┃ │ │ │ CE ├ ─ ─ ─ ─AC ─ ─ ─ ┃│ CE
-   ├───┤ PE │┃ │ │ │ ├─────────────────┃┤ │ │ │┃ │ │ └───┬┘ ┃└──┬─┘
-   └────┘┃ │ │ │ ┗━━Distributed━━┛ │ │ │ │ PE │ │ │ │ │ │ │ │ │
-   └──────────────┘ └───────────────┘ iii) Distributed PE
-
-{: #fig-distributed-pe-ce title="Distributed CE and PE and Generic Model" artwork-align="center"}
+{: #figure-50 title="Generic Model vs Distributed CE and PE" artwork-align="center"}
 
 ####  MPLS/SRv6 Attachment Circuit
 
-In some cases, the CE router connects with the Provider thanks to Inter-AS Option B/C. In this case, the configuration of VRFs together with Control Plane identifiers such as route-targets/route-distinguishers happens on the CE. This is a source of confusion since these are typical PE configuration points. Nonetheless, since we consider the definition based on Orchestration Scope.
+In some cases, the CE router connects with the Provider thanks to Inter-AS Option B/C (FIXREF ???). In this case, the configuration of VRFs together with Control Plane identifiers such as route-targets/route-distinguishers happens on the CE. This is a source of confusion since these are typical enforced on PE devices. The definition based on Orchestration Scope prevails: the CE is managed by the Customer and the AC is based on MPLS or SRv6 dataplane technologies.
+
+####  Co-Managed CE / PE
+
+Another variation is a co-Managed CE/PE device which is orchestrated by both the Customer and the Provider. In this case, Customer and Provider usually have control on distinct device configuration perimeters (e.g. Customer is responsible for the LAN interface, Provider is responsible for the WAN interface and Routing). Considering the generic model, the device has both PE and CE function and there is no strict AC connection, although we may consider that the AC stitching logic happens internally within the box. (??? worth discussion ???)
 
 ###  Segmentation of the NF-to-NF Datapath
 
-   In this document, we decompose the datapath between NFs into two main types of segments based on Orchestration
-   domains:
+   The datapath between NFs can be decomposed into 3 main types of sections based on Orchestration
+   domains and logic:
 
-   *  TN Segment:
-      The TN Segment provides connectivity between two sites that host NFs. The realization of this segment is driven by the IETF
-      Network Slice Controller (NSC).
-   * Local Segment:
+   *  Customer Network Section: the Customer Network section is deployed within the Customer Network. This section either connects two NFs located on the same Customer Network (??? insert REF} or it connects a NF to a CE. This section may not exist if the NF is the CE: in this case the AC connects the NF to the PE. The realization of this section is driven the 5G Network  Orchestration and potentially Customer Network Orchestration (e.g. Fabric Manager, Element Management System, VIM...). The realization of this section does not involve the Transport Network Orchestration.
+   *  Transport Network Section: The TN section provides connectivity between Customer Networks. This section represents the connectivity between two PEs (e.g. VRF).The realization of this section is controlled by the NSC.
+   *  Attachment Circuit section: As mentionned in previous sections, the Attachment Circuit connects the Customer Network to the Transport Network. In other words, the AC section represents the connectivity between a CE and PE.  The orchestration of this section relies partially the NSC for the configuration of the AC on the PE interface and the Customer Network Orchestration logic.
+
       The Local segment either connects two NFs within a Customer Network or connects a NF to
       the TN. In the first case, the realization of the segment is  driven by the 5G Network Slice Orchestrator (5GNSO) without any
       involvement of the IETF NSC. In the second case, the realization of this segment partially relies on the IETF NSC for the configuration of the AC on a PE interface.  Generally, the Local Segment is a datapath local to a site with a potential extension to reach the TN. A Customer Network can be (but not limited to): a Data Center (DC), a Point of Presence (PoP), a
       Central Office (CO), or a virtualized infrastructure in a Public
       Cloud.
-
    Note that more complex scenarios can be considered (for example, adding an extra
    segmentation of TN or Local Segments).  Additionally, sites can be of
    different types (such as Edge, Data Center, or Public Cloud), each with
@@ -398,7 +477,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
        ◀─────────────────────────────────────▶
            End-to-end datapath between NFs
 
-             Figure 2: Segmentation of the NF-NF Datapath
+             Figure 3: Segmentation of the NF-NF Datapath
 
    NFs may also be placed in the same site and interconnected via a
    Local Segment.  In such a case, there is no TN Segment (i.e., no
@@ -421,9 +500,9 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                   ◀─────────────────────────────────────▶
                       End-to-end datapath between NFs
 
-              Figure 3: NF-to-NF Datapath within the Same Site
+              Figure 4: NF-to-NF Datapath within the Same Site
 
-   Figure 4 provides samples to illustrate the different realizations of
+   Figure 5 provides samples to illustrate the different realizations of
    Local and TN Segments, as well the SDPs:
 
    *  Layer 2 vs. Layer 3 Local Segment: The Local Segment can
@@ -524,10 +603,10 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
 
                       ■ Service Demarcation Point
 
-       Figure 4: Examples of various combinations of Local Segments,
+       Figure 5: Examples of various combinations of Local Segments,
                                 ETN, and SDP
 
-2.2.2.  Orchestration of Local Segment Terminations at ETNs
+2.3.2.  Orchestration of Local Segment Terminations at ETNs
 
    The interconnection between a 5G site and the Transport Network is
    made up of shared networking resources.  More precisely, the Local
@@ -540,7 +619,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    that this coordination is based upon standard YANG data models and
    APIs (more details in further sections).
 
-   Figure 5 is a basic example of a Layer 3 CE-PE link realization with
+   Figure 6 is a basic example of a Layer 3 CE-PE link realization with
    shared network resources, such as VLAN-ID and IP prefixes, which must
    be passed between Orchestrators via the Network Slice Service
    Interface ([I-D.ietf-teas-ietf-network-slice-nbi-yang]) or an
@@ -570,7 +649,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
             └────────────────────────────────────┘
                          Local Segment
 
-                   Figure 5: An Example of Data Exchange
+                   Figure 6: An Example of Data Exchange
 
    Note that the allocation of these resources (e.g., VLAN-IDs or IP
    prefixes) can be either managed by the SMO or the Transport Network.
@@ -579,7 +658,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    network resources.  In the latter case, this information is exchanged
    in a second step.
 
-2.3.  5G Slice to IETF Network Slice Mapping
+2.4.  5G Slice to IETF Network Slice Mapping
 
    There are multiple options to map a 5G network slice to IETF Network
    Slices:
@@ -587,7 +666,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    *  1 to N: A single 5G Network Slice can map to multiple IETF Network
       Slices (1 to N).  One example of such a case is the separation of
       the 5G Control Plane and User Plane: this use case is represented
-      in Figure 6 where a slice (EMBB) is deployed with a separation of
+      in Figure 7 where a slice (EMBB) is deployed with a separation of
       User Plane and Control Plane at the TN.
 
    *  N to 1: Multiple 5G Network Slices may rely upon the same IETF
@@ -595,7 +674,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
       uses a shared TN NSS).  In such a case, the Service Level
       Agreement (SLA) differentiation of slices would be entirely
       controlled at 5G Control Plane, for example, with appropriate
-      placement strategies: this use case is represented in Figure 7,
+      placement strategies: this use case is represented in Figure 8,
       where a User Plane Function (UPF) for the URLLC slice is
       instantiated at the edge cloud close to the gNB CU-UP User Plane
       for better latency/jitter control, while the 5G Control Plane and
@@ -624,7 +703,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
 
                   └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
 
-          Figure 6: 1 (5G Slice) to N (IETF Network Slice) Mapping
+          Figure 7: 1 (5G Slice) to N (IETF Network Slice) Mapping
 
                       ┌ ─ ─ ─ ─ ─ ─ ┐
                          Edge Cloud
@@ -650,7 +729,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                       │      Transport Network
                        ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
 
-          Figure 7: N (5G Slice) to 1 (IETF Network Slice) Mapping
+          Figure 8: N (5G Slice) to 1 (IETF Network Slice) Mapping
 
    Note that the actual realization of the mapping depends on several
    factors, such as the actual business cases, the NF vendor
@@ -664,7 +743,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    ease slice migration strategies (e.g., move from 1-to-1 mapping to N-
    to-1).
 
-2.4.  First 5G Slice versus Subsequent Slices
+2.5.  First 5G Slice versus Subsequent Slices
 
    A 5G Network Slice is fully functional with both 5G Control Plane and
    User Plane capabilities (i.e., dedicated NF functions or contexts).
@@ -672,7 +751,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    specific logic since it must deploy both CP and UP.  This is not the
    case for the deployment of subsequent slices because they can share
    the same CP of the first slice, while instantiating dedicated UP.  An
-   example of an incremental deployment is depicted in Figure 8.
+   example of an incremental deployment is depicted in Figure 9.
 
    At the time of writing (2023), Section 6.2 of [NG.113] specifies that
    the eMBB slice (SST=1 and no SD) should be supported globally.  This
@@ -730,7 +809,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                           ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
           Deployment of additional 5G slice with shared Control Plane
 
-              Figure 8: First and Subsequent Slice Deployment
+              Figure 9: First and Subsequent Slice Deployment
 
 3.  High-Level Overview of the Realization Model
 
@@ -771,7 +850,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
       traffic class within each slice.
 
       In the managed CE use cases (use cases A1, A2, B1, and B2 depicted
-      in Figure 8), edge admission control could be distributed between
+      in Figure 9), edge admission control could be distributed between
       CE and PE, where one part of the edge admission control is
       implemented on the CE, and another part of the edge admission
       control is implemented on the PE.
@@ -814,7 +893,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
        ■ fine-grained QoS (dedicated resources per IETF NS)
        □ coarse QoS, with resources shared by all IETF NSes
 
-       Figure 9: Resource Allocation in with single NRP Slicing Model
+      Figure 10: Resource Allocation in with single NRP Slicing Model
 
    The 5G control plane relies upon the S-NSSAI (Single Network Slice
    Selection Assistance Information: 32-bit slice identifier) for slice
@@ -864,7 +943,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
     ● – logical interface represented by VLAN on physical interface
     ■ - Service Demarcation Point
 
-                   Figure 10: 5G Slice with VLAN Hand-off
+                   Figure 11: 5G Slice with VLAN Hand-off
 
 3.2.  IP Hand-off
 
@@ -899,7 +978,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
              ○ – tunnel (IPsec, GTP-U, ...) termination point
              ■ - Service Demarcation Point
 
-                    Figure 11: 5G Slice with IP Hand-off
+                    Figure 12: 5G Slice with IP Hand-off
 
    The mapping table can be simplified if, for example, IPv6 addressing
    is used to address NFs.  An IPv6 address is a 128-bit long field,
@@ -910,7 +989,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    local allocation method to allocate IPv6 addresses to NF loopbacks,
    without redefining IPv6 semantics.  Different IPv6 address allocation
    schemes following this mapping approach may be used, with one example
-   allocation showed in Figure 12.
+   allocation showed in Figure 13.
 
    Note that this addressing scheme is local to a node; intermediary
    nodes are not required to associate any additional semantic with IPv6
@@ -931,16 +1010,16 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                    tt     - SST (8 bits)
                    dddddd - SD (24 bits)
 
-            Figure 12: An Example of S-NSSAI embedded into IPv6
+            Figure 13: An Example of S-NSSAI embedded into IPv6
 
-   In the example shown in Figure 12, the most significant 96 bits of
+   In the example shown in Figure 13, the most significant 96 bits of
    the IPv6 address are unique to the NF, but do not carry any slice-
    specific information, while the least significant 32 bits are used to
    embed the S-NSSAI information.  The 96-bit part of the address may be
    further divided based, for example, on the geographical location or
    the DC identification.
 
-   Figure 13 shows an example of a slicing deployment, where the S-NSSAI
+   Figure 14 shows an example of a slicing deployment, where the S-NSSAI
    is embedded into IPv6 addresses used by NFs.  NF-A has a set of
    tunnel termination points, with unique per-slice IP addresses
    allocated from the 2001:db8::a:0:0/96 prefix, while NF-B uses a set
@@ -969,7 +1048,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
              ○ – tunnel (IPsec, GTP-U, ...) termination point
              ■ - Service Demarcation Point
 
-       Figure 13: Deployment example with S-NSSAI embedded into IPv6
+       Figure 14: Deployment example with S-NSSAI embedded into IPv6
 
 3.3.  MPLS Label Hand-off
 
@@ -1005,9 +1084,9 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    In this option, L3VPN service instances for different IETF Network
    Slice Services are instantiated outside the TN domain.  These L3VPN
    service instances could be instantiated either on the compute,
-   hosting mobile network functions (Figure 14, left hand side), or
+   hosting mobile network functions (Figure 15, left hand side), or
    within the cloud infrastructure itself (e.g., on the top of the rack
-   or leaf switch within cloud IP fabric (Figure 14, right hand side)).
+   or leaf switch within cloud IP fabric (Figure 15, right hand side)).
    On the local segment connected to ETN, packets are already MPLS
    encapsulated (or MPLSoUDP encapsulated, if cloud or compute
    infrastructure doesn't support native MPLS encapsulation).
@@ -1041,18 +1120,18 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
      ◙ - service instances (with unique MPLS label)
      ■ - Service Demarcation Point
 
-                     Figure 14: MPLS Hand-off: Option B
+                     Figure 15: MPLS Hand-off: Option B
 
    MPLS labels are allocated dynamically, especially in Option 10B
    deployments, where at the domain boundaries service prefixes are
    reflected with next-hop self, and new label is dynamically allocated,
-   as visible in Figure 14 (e.g., labels A, A' and A" for the first
+   as visible in Figure 15 (e.g., labels A, A' and A" for the first
    depicted slice).  Therefore, for any slice-specific per hop behavior
    at the TN domain edge, the ETN must be able to determine which label
    represents which slice.  In the BGP control plane, when exchanging
    service prefixes over local segment, each slice might be represented
    by a unique BGP community, so tracking label assignment to the slice
-   is possible.  For example, in Figure 14, for the slice identified
+   is possible.  For example, in Figure 15, for the slice identified
    with COM=1, ETN advertises a dynamically allocated label A".  Since,
    based on the community, the label to slice association is known, ETN
    can use this dynamically allocated label A" to identify incoming
@@ -1064,7 +1143,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    can have different community representing a different slice.
    Depending on the business requirements, each slice could be
    represented by a different service instance, as outlined in
-   Figure 14.  In that case, the route target extended community might
+   Figure 15.  In that case, the route target extended community might
    be used as slice differentiator.  In another deployment, all prefixes
    (representing different slices) might be handled by single 'mobile'
    service instance, and some other BGP attribute (e.g., a standard
@@ -1167,7 +1246,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    Network Slices) increases, a single QoS queue on transit links serves
    multiple slices with similar characteristics.  QoS enforcement on
    transit links is fully coarse (single NRP, sharing resources among
-   all IETF Network Slices), as displayed in Figure 15.
+   all IETF Network Slices), as displayed in Figure 16.
 
         ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
         ┏━━━━━━━━━━━━━━━━━┓         ETN                              │
@@ -1207,7 +1286,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
           (dedicated resources per            (resources shared by
             IETF Network Slice)                multiple IETF NSs)
 
-           Figure 15: Slice to TN QoS Mapping (5QI-unaware Model)
+           Figure 16: Slice to TN QoS Mapping (5QI-unaware Model)
 
    When the IP traffic is handed over at the SDP from the local segment
    to the TN domain, the PE encapsulates the traffic into MPLS (if MPLS
@@ -1222,7 +1301,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    marking, per hop behavior for all IETF Network Slices is executed on
    TN links.  TN domain transit routers do not evaluate the original IP
    header for QoS-related decisions.  This model is outlined in
-   Figure 16 for MPLS encapsulation, and in Figure 17 for SRv6
+   Figure 17 for MPLS encapsulation, and in Figure 18 for SRv6
    encapsulation.
 
                                               ┌──────────────┐
@@ -1245,7 +1324,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
              │              │         │╱      │              │
              └──────────────┘ ─ ─ ─ ─ ─ ─ ─ ─ └──────────────┘
 
-                   Figure 16: QoS with MPLS Encapsulation
+                   Figure 17: QoS with MPLS Encapsulation
 
                                               ┌──────────────┐
                                               │ IPv6 Header  │
@@ -1271,7 +1350,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
              │              │         │╱      │              │
              └──────────────┘ ─ ─ ─ ─ ─ ─ ─ ─ └──────────────┘
 
-                   Figure 17: QoS with IPv6 Encapsulation
+                   Figure 18: QoS with IPv6 Encapsulation
 
    From the QoS perspective, both options are similar.  However, there
    is one difference between the two options.  The MPLS TC is only 3
@@ -1350,7 +1429,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    Inbound edge enforcement model for 5QI-unaware model, where all
    packets belonging to the slice are treated the same way in the TN
    domain (no 5Q QoS Class differentiation in the TN domain) is outlined
-   in Figure 18.
+   in Figure 19.
 
                                 Slice
                                policer     ┌─────────┐
@@ -1387,7 +1466,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                                        └───┬──┘      │
                                            └─────────┘
 
-       Figure 18: Ingress Slice Admission Control (5QI-unware Model)
+       Figure 19: Ingress Slice Admission Control (5QI-unware Model)
 
 4.4.2.  Outbound Edge Resource Control
 
@@ -1416,7 +1495,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    queuing mechanisms is out of scope for this document, but is provided
    in [RFC7806].
 
-   Figure 19 outlines the outbound edge resource control model at the
+   Figure 20 outlines the outbound edge resource control model at the
    transport network layer for 5QI-unaware slices.  Each slice is
    assigned a single egress queue.  The sum of slice CIRs, used as the
    weight in weighted queueing model, MUST NOT exceed the physical
@@ -1452,14 +1531,14 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
        │     └───┬──┘─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
        └─────────┘
 
-     Figure 19: Ingress Slice Admission control (5QI-unaware Model)
+     Figure 20: Ingress Slice Admission control (5QI-unaware Model)
 
 4.5.  5QI-aware Model
 
    In the 5QI-aware model, potentially a large number of 5G QoS Classes,
    represented via DSCP set by NFs (the architecture scales to thousands
    of 5G slices) is mapped (multiplexed) to up to 8 TN QoS Classes used
-   in transport transit equipment, as outlined in Figure 20.
+   in transport transit equipment, as outlined in Figure 21.
 
        ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
        ┏━━━━━━━━━━━━━━━━━┓         ETN                              │
@@ -1499,7 +1578,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
          (dedicated resources per            (resources shared by
            IETF Network Slice)                multiple IETF NSs)
 
-        Figure 20: Slice 5Q QoS to TN QoS Mapping (5QI-aware Model)
+        Figure 21: Slice 5Q QoS to TN QoS Mapping (5QI-aware Model)
 
    Given that in large scale deployments (large number of 5G slices),
    the number of potential 5G QoS Classes is much higher than the number
@@ -1509,9 +1588,11 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    QoS Class when transported in the TN domain.  That is, common per hop
    behavior (PHB) is executed on transit TN routers for all packets
    grouped together.  An example of this approach is outlined in
-   Figure 21.
+   Figure 22.
 
-> Please note that the numbers indicated in {{figure-34}} (S-NSSAI, 5QI, DSCP, queue, etc.) are provided for illustration purposes only and shoudl not be considered as deployment guidance.
+   Note:  The numbers indicated in Figure 22 (S-NSSAI, 5QI, DSCP, queue,
+      etc.) are provided for illustration purposes only and should not
+      be considered as deployment guidance.
 
                              ┌───────────── ETN  ─────────────────┐
        ┌────── NF-A ──────┐  │                                    │
@@ -1543,7 +1624,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
        └──────────────────┘  │  ─ ─ ─ ─ ─                         │
                              └────────────────────────────────────┘
 
-              Figure 21: Example of 3GPP QoS Mapped to TN QoS
+              Figure 22: Example of 3GPP QoS Mapped to TN QoS
 
    In current SDO progress of 3GPP (Rel.17) and O-RAN the mapping of 5QI
    to DSCP is not expected in per-slice fashion, where 5QI to DSCP
@@ -1586,7 +1667,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
       prioritized classes.
 
    In the first option, the slice admission control is executed with
-   traffic class granularity, as outlined in Figure 22.  In this model,
+   traffic class granularity, as outlined in Figure 23.  In this model,
    if a premium class doesn't consume all available class capacity, it
    cannot be reused by non-premium (i.e., Best Effort) class.
 
@@ -1624,17 +1705,17 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                                                 └──┬───┘     │
                                                    └─────────┘
 
-        Figure 22: Ingress Slice Admission Control (5QI-aware Model)
+        Figure 23: Ingress Slice Admission Control (5QI-aware Model)
 
    The second model combines the advantages of 5QI-unaware model (per
    slice admission control) with the per traffic class admission
-   control, as outlined in Figure 22.  Ingress admission control is at
+   control, as outlined in Figure 23.  Ingress admission control is at
    class granularity for premium classes (CIR only).  Non-premium class
    (i.e., Best Effort) has no separate class admission control policy,
    but it is allowed to use the entire slice capacity, which is
    available at any given moment.  I.e., slice capacity, which is not
    consumed by premium classes.  It is a hierarchical model, as depicted
-   in Figure 23.
+   in Figure 24.
 
                                           Slice
                                          policer   ┌─────────┐
@@ -1671,11 +1752,11 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                                             '   └──┬───┘     │
                                                    └─────────┘
 
-   Figure 23: Ingress Slice Admission Control (5QI-aware) - Hierarchical
+   Figure 24: Ingress Slice Admission Control (5QI-aware) - Hierarchical
 
 4.5.2.  Outbound Edge Resource Control
 
-   Figure 24 outlines the outbound edge resource control model at the
+   Figure 25 outlines the outbound edge resource control model at the
    transport network layer for 5QI-aware slices.  Each slice is assigned
    multiple egress queues.  The sum of queue weights (equal to 5Q QoS
    CIRs within the slice) CIRs MUST NOT exceed the CIR of the slice
@@ -1725,17 +1806,17 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
       │     └───┬──┘─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
       └─────────┘
 
-           Figure 24: Egress Slice Admission Control (5QI-aware)
+           Figure 25: Egress Slice Admission Control (5QI-aware)
 
 4.6.  Transit Resource Control
 
    Transit resource control is much simpler than Edge resource control.
-   As outlined in Figure 20, at the edge, 5Q QoS Class marking
+   As outlined in Figure 21, at the edge, 5Q QoS Class marking
    (represented by DSCP related to 5QI set by mobile network functions
    in the packets handed off to the TN) is mapped to the TN QoS Class.
    Based in TN QoS Class, when the packet is encapsulated with outer
    header (MPLS or IPv6), TN QoS Class marking (MPLS TC or IPv6 DSCP in
-   outer header, as depicted in Figure 16 and Figure 17) is set in the
+   outer header, as depicted in Figure 17 and Figure 18) is set in the
    outer header.  PHB on transit is based exclusively on that TN QoS
    Class marking, i.e., original 5G QoS Class DSCP is not taken into
    consideration on transit.
@@ -1761,7 +1842,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    represent tunnels optimized for latency, and transport plane "B"
    represent tunnels optimized for high capacity.
 
-   Figure 25 depicts an example of a simple network with two transport
+   Figure 26 depicts an example of a simple network with two transport
    planes.  These transport planes might be realized via various IP/MPLS
    techniques, for example Flex-Algo or RSVP/SR traffic engineering
    tunnels with or without PCE, and with or without bandwidth
@@ -1794,10 +1875,10 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                 ●════════▶  Tunnels of Transport Plane A
                 ○════════▷  Tunnels of Transport Plane B
 
-                        Figure 25: Transport Planes
+                        Figure 26: Transport Planes
 
    Note that there could be multiple tunnels within a single transport
-   plane between any pair of PEs.  For readibility, Figure 25 shows only
+   plane between any pair of PEs.  For readibility, Figure 26 shows only
    single tunnel per transport plane for [ingress PE, egress PE] pair.
 
    Similar to the QoS mapping models discussed in Section 4, for mapping
@@ -1816,7 +1897,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    therefore the entire slice is subject to the same per-hop behavior.
    Similarly, in 5QI-unaware transport plane mapping model, the entire
    slice is mapped to a single transport plane, as depicted in
-   Figure 26.
+   Figure 27.
 
                  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
                  ┏━━━━━━━━━━━━━━━━━┓                        │
@@ -1854,7 +1935,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                  ┗━━━━━━━━━━━━━━━━━┛                        │
                  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
 
-      Figure 26: Slice to Transport Plane Mapping (5QI-unaware Model)
+      Figure 27: Slice to Transport Plane Mapping (5QI-unaware Model)
 
    It is worth noting that there is no strict correlation between TN QoS
    Classes and Transport Planes.  The TN domain can be operated with
@@ -1873,7 +1954,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    the granularity of 5G QoS Class.  Given that the potential number of
    transport planes is limited, packets from multiple 5G QoS Classes
    with similar characteristics are mapped to a common transport plane,
-   as depicted in Figure 27.
+   as depicted in Figure 28.
 
                  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
                  ┏━━━━━━━━━━━━━━━━━┓
@@ -1911,7 +1992,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                  ┗━━━━━━━━━━━━━━━━━┛
                  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
 
-       Figure 27: Slice to Transport Plane mapping (5QI-aware Model)
+       Figure 28: Slice to Transport Plane mapping (5QI-aware Model)
 
 6.  Capacity Planning/Management
 
@@ -1920,7 +2001,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    This section describes the information conveyed by the SMO to the
    transport controller with respect to slice bandwidth requirements.
 
-   Figure 28 shows three DCs that contain instances of network
+   Figure 29 shows three DCs that contain instances of network
    functions.  Also shown are PEs that have links to the DCs.  The PEs
    belong to the transport network.  Other details of the transport
    network, such as P-routers and transit links are not shown.  Also
@@ -1959,7 +2040,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
 
      ■ - SDP, with fine-grained QoS (dedicated resources per IETF NS)
 
-               Figure 28: An Example of Multi-DC Architecture
+               Figure 29: An Example of Multi-DC Architecture
 
    Let us consider 5G Slice "X" that uses some of the network functions
    in the three DCs.  If this slice has latency requirements, the SMO
@@ -1979,7 +2060,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    mechanism for conveying the information will be discussed in a future
    version of this document.
 
-   Figure 29 shows the matrix of bandwidth demands for 5G slice "X".
+   Figure 30 shows the matrix of bandwidth demands for 5G slice "X".
    Within the slice, multiple network function instances might be
    sending traffic from DCi to DCj.  However, the SMO sums the
    associated demands into one value.  For example, NF1A and NF1B in DC1
@@ -2020,7 +2101,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
                 └──────┴──────┴──────┴──────┴──────────────┘
                                    Slice Y
 
-                 Figure 29: Inter-DC Traffic Demand Matrix
+                 Figure 30: Inter-DC Traffic Demand Matrix
 
    [I-D.ietf-teas-ietf-network-slice-nbi-yang] can be used to convey all
    of the information in the traffic matrix to the IETF NSC.  The IETF
@@ -2120,7 +2201,7 @@ In some cases, the CE router connects with the Provider thanks to Inter-AS Optio
    is 12 units (8 units for Slice X and 4 units for Slice Y).  When the
    SMO requests a new slice, the transport controller, in its mind,
    increments the bandwidth requirement according to the requirements of
-   the new slice.  For example, in Figure 28, suppose a new slice is
+   the new slice.  For example, in Figure 29, suppose a new slice is
    instantiated that needs 0.8 Gbps from DC1 to DC2.  The transport
    controller would increase its notion of the bandwidth requirement
    from DC1 to DC2 from 12 Gbps to 12.8 Gbps to accommodate the
@@ -2520,9 +2601,10 @@ Appendix B.  An Overview of 5G Networking
 
    This section provides a brief introduction to 5G mobile networking
    with a perspective on the Transport Network.  This section does not
-   intend to replace or define 3GPP architecure, it just provides a
-   brief overview for readers that do not have a mobile background.  For
-   more comprehensive information, refer to [TS-23.501].
+   intend to replace or define 3GPP architecture, instead its objective
+   is to provide an overview for readers that do not have a mobile
+   background.  For more comprehensive information, refer to
+   [TS-23.501].
 
 B.1.  Key Building Blocks
 
@@ -2530,7 +2612,7 @@ B.1.  Key Building Blocks
    compose the 5G System (5GS) Architecture together with related
    interfaces (e.g., N1, N2).  This architecture has native Control and
    User Plane separation, and the Control Plane leverages a service-
-   based architecture.  Figure 30 outlines an example 5GS architecture
+   based architecture.  Figure 31 outlines an example 5GS architecture
    with a subset of possible network functions and network interfaces.
 
        ┌─────┐  ┌─────┐  ┌─────┐    ┌─────┐  ┌─────┐  ┌─────┐
@@ -2550,11 +2632,11 @@ B.1.  Key Building Blocks
                      │UE ├──┤(R)AN├─────┤ UPF ├────┤ UPF ├────( DN  )
                      └───┘  └─────┘     └─────┘    └─────┘     `───'
 
-          Figure 30: 5GS Architecture and Service-based Interfaces
+          Figure 31: 5GS Architecture and Service-based Interfaces
 
    Similar to previous versions of 3GPP mobile networks [RFC6459], a 5G
    mobile network is split into the following four major domains
-   (Figure 31):
+   (Figure 32):
 
    *  UE, MS, MN, and Mobile:
 
@@ -2581,10 +2663,10 @@ B.1.  Key Building Blocks
 
    *  Transport Network (TN):
 
-      Provides connectivity between sites where 5G Network Functions are
-      located.  The TN may connect sites from the RAN to the Core
-      Network, as well as sites within the RAN or within the CN.  This
-      connectivity is achieved using IP.
+      Provides connectivity between 5G Network Functions.  The TN may
+      provide connectivity from the RAN to the Core Network, as well as
+      within the RAN or within the CN.  The traffic generated by NFs is
+      - mostly - based on IP or Ethernet.
 
        ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
                                                       │
@@ -2610,13 +2692,13 @@ B.1.  Key Building Blocks
                                                       │
        └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
 
-        Figure 31: Building Blocks of 5G Architecture (A High-Level
+        Figure 32: Building Blocks of 5G Architecture (A High-Level
                               Representation)
 
 B.2.  Core Network (CN)
 
    The 5G Core Network (5GC) is made up of a set of NFs which fall into
-   two main categories (Figure 32):
+   two main categories (Figure 33):
 
    *  5GC User Plane:
 
@@ -2660,7 +2742,7 @@ B.2.  Core Network (CN)
           │         │    │                         │
            ─ ─ ─ ─ ─      ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
 
-                      Figure 32: 5G Core Network (CN)
+                      Figure 33: 5G Core Network (CN)
 
 B.3.  Radio Access Network (RAN)
 
@@ -2689,7 +2771,7 @@ B.3.  Radio Access Network (RAN)
    processing.  Furthermore, the CU can be itself split into Control
    Plane (CU-CP) and User Plane (CU-UP).
 
-   Figure 33 depicts a disaggregated RAN with NFs and interfaces.
+   Figure 34 depicts a disaggregated RAN with NFs and interfaces.
 
                  ┌─────────────────────────────────┐    ┌ ─ ─ ─ ─ ─ ┐
                  │                                 │ N3
@@ -2729,7 +2811,7 @@ B.3.  Radio Access Network (RAN)
                  │       disaggregated gNodeB      │
                  └─────────────────────────────────┘    └ ─ ─ ─ ─ ─ ┘
 
-                       Figure 33: RAN Disaggregation
+                       Figure 34: RAN Disaggregation
 
 B.4.  Transport Network (TN)
 
@@ -2750,7 +2832,7 @@ B.4.  Transport Network (TN)
       interconnection between the RAN and the Core Network.  All traffic
       is also encapsulated in IP.
 
-   Figure 34 illustrates the different segments of the Transport Network
+   Figure 35 illustrates the different segments of the Transport Network
    with the relevant Network Functions.
 
         ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
@@ -2765,11 +2847,11 @@ B.4.  Transport Network (TN)
          │ RU │      │ DU │         │ CU │       │ UPF ├────( DN  )
          └────┘      └────┘         └────┘       └─────┘     `───'
 
-                      Figure 34: 5G Transport Segments
+                      Figure 35: 5G Transport Segments
 
    It is worth mentioning that a given part of the transport network can
    carry several 5G transport segments concurrently, as outlined in
-   Figure 35.  This is because different types of 5G network functions
+   Figure 36.  This is because different types of 5G network functions
    might be placed in the same location (e.g., the UPF from one slice
    might be placed in the same location as the CU-UP from another
    slice).
@@ -2793,7 +2875,7 @@ B.4.  Transport Network (TN)
         │RU-2│      │DU-2│         │CU-2│        │UPF-2├────( DN  )
         └────┘      └────┘         └────┘        └─────┘     `───'
 
-                Figure 35: Concurrent 5G Transport Segments
+                Figure 36: Concurrent 5G Transport Segments
 
 Acknowledgments
 
