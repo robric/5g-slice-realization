@@ -5,12 +5,12 @@
 TEAS                                               K. G. Szarkowicz, Ed.
 Internet-Draft                                           R. Roberts, Ed.
 Intended status: Informational                                  J. Lucek
-Expires: 5 October 2023                                 Juniper Networks
+Expires: 7 October 2023                                 Juniper Networks
                                                        M. Boucadair, Ed.
                                                                   Orange
                                                          L. M. Contreras
                                                               Telefonica
-                                                            3 April 2023
+                                                            5 April 2023
 
 
  A Realization of IETF Network Slices for 5G Networks Using Current IP/
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 October 2023.
+   This Internet-Draft will expire on 7 October 2023.
 
 Copyright Notice
 
